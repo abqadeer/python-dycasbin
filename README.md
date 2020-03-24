@@ -1,0 +1,1 @@
+DynamoDB adopter for casbin
