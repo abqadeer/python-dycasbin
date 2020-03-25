@@ -7,6 +7,9 @@ Run `pip install python-dycasbin`
 Usage
 -----
 ```
+import casbin
+from python_dycasbin import adapter
+
 adapter = adapter.Adapter(endpoint_url='http://localhost:8000')
 e = casbin.Enforcer("model.conf", adapter, True)
 
