@@ -1,3 +1,4 @@
 casbin==0.8.4
 pytest-mock==2.0.0
 pytest==5.4.1
+boto3==1.12.26
