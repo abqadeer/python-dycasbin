@@ -71,8 +71,8 @@ def test_get_line_from_item(mocker):
 
     obj = adapter.Adapter()
     result = obj.get_line_from_item(
-        {"id": "rand_id", "ptype": {"S": "p"}, "v0": {"S": "user1"}})
-    assert result == 'p, user1'
+        {"id": "rand_id", "ptype": {"S": "p"}, "v0": {"S": "user1"}, "v1": {"S": "data1"}})
+    assert result == 'p, user1, data1'
 
 
 def mock_get_line_from_item(itme, model):
