@@ -70,9 +70,9 @@ def test_get_line_from_item(mocker):
     mocker.patch("boto3.client")
 
     obj = adapter.Adapter()
-    result = obj.get_line_from_item({"ptype": {"S": "p"}, "v0": {"S": "0"}})
-
-    assert result == False
+    result = obj.get_line_from_item(
+        {"id": "rand_id", "ptype": {"S": "p"}, "v0": {"S": "user1"}})
+    assert result == 'p, user1'
 
 
 def mock_get_line_from_item(itme, model):

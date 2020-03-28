@@ -52,7 +52,7 @@ class Adapter(persist.Adapter):
                 persist.load_policy_line(self.get_line_from_item(i), model)
 
             # To forcefully break the loop when testing
-            if "LastEvaluatedKey" in response and ["LastEvaluatedKey"] == "from_pytest":
+            if "LastEvaluatedKey" in response and response["LastEvaluatedKey"] == "from_pytest":
                 break
 
     def get_line_from_item(self, item):
