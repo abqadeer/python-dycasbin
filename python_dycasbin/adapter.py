@@ -11,6 +11,8 @@ class Adapter(persist.Adapter):
         """create connection and dynamodb table"""
         self.table_name = 'casbin_rule'
         self.dynamodb = boto3.client('dynamodb', **kwargs)
+        self.dynamodb_resource = boto3.resource('dynamodb', **kwargs)
+
         try:
 
             self.dynamodb.create_table(
@@ -35,6 +37,38 @@ class Adapter(persist.Adapter):
             )
         except self.dynamodb.exceptions.ResourceInUseException:
             pass
+
+    def update_policy(self, sec, ptype, old_rule, new_rule):
+        self.add_policy(sec, ptype, new_rule)
+        self.remove_policy(sec, ptype, old_rule)
+        return True
+
+    def get_filtered_item(self, ptype,  rules):
+        exp_attr = {}
+        exp_attr[':ptype'] = {'S': ptype}
+        filter_exp = []
+        filter_exp.append('ptype = :ptype')
+
+        for i, rule in enumerate(rules):
+            exp_attr[':v{}'.format(i)] = {'S': rule}
+            filter_exp.append('v{} = :v{}'.format(i, i))
+
+        filter_exp = ' and '.join(filter_exp)
+
+        response = self.dynamodb.scan(
+            ExpressionAttributeValues=exp_attr,
+            FilterExpression=filter_exp,
+            TableName=self.table_name,
+        )
+
+        data = response['Items']
+
+        while 'LastEvaluatedKey' in response:
+            response = self.dynamodb.scan(
+                ExclusiveStartKey=response['LastEvaluatedKey'])
+            data.extend(response['Items'])
+
+        return data
 
     def load_policy(self, model):
         """load all policies from database"""
@@ -127,11 +161,20 @@ class Adapter(persist.Adapter):
         """removes policy rules that match the filter from the storage.
         This is part of the Auto-Save feature.
         """
-
         if not (0 <= field_index <= 5):
             return False
         if not (1 <= field_index + len(field_values) <= 6):
             return False
-        self.remove_policy(sec, ptype, list(field_values))
+
+        matched_rules = self.get_filtered_item(ptype, list(field_values))
+        table = self.dynamodb_resource.Table(self.table_name)
+
+        with table.batch_writer() as batch:
+            for each in matched_rules:
+                batch.delete_item(
+                    Key={
+                        'id': each['id']['S'],
+                    }
+                )
 
         return True
