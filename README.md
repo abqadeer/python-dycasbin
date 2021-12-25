@@ -6,11 +6,11 @@ Run `pip install python-dycasbin`
 
 Usage
 -----
-```
+```python
 import casbin
 from python_dycasbin import adapter
 
-adapter = adapter.Adapter(endpoint_url='http://localhost:8000')
+adapter = adapter.Adapter(table_name='casbin_rule', endpoint_url='http://localhost:8000')
 e = casbin.Enforcer("model.conf", adapter, True)
 
 sub = "eve4"  # the user that wants to access a resource.

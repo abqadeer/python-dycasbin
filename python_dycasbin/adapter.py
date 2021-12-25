@@ -1,15 +1,15 @@
-from casbin import persist
-import boto3
-import botocore
 import hashlib
+
+import boto3
+from casbin import persist
 
 
 class Adapter(persist.Adapter):
     """the interface for Casbin adapters."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, table_name='casbin_rule', **kwargs):
         """create connection and dynamodb table"""
-        self.table_name = 'casbin_rule'
+        self.table_name = table_name
         self.dynamodb = boto3.client('dynamodb', **kwargs)
         self.dynamodb_resource = boto3.resource('dynamodb', **kwargs)
 
@@ -96,7 +96,7 @@ class Adapter(persist.Adapter):
 
         while i < len(item) - 2:
             line = '{}, {}'.format(line, item['v{}'.format(i)]['S'])
-            i = i+1
+            i = i + 1
 
         return line
 

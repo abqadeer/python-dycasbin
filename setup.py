@@ -3,7 +3,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 setuptools.setup(
     name='python_dycasbin',
-    version='0.2.1',
+    version='0.3.1',
     author="Abdul Qadeer",
     author_email="abqdr.is@gmail.com",
     description="DynamoDB adopter for casbin",
