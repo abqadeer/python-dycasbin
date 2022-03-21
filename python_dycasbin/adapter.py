@@ -1,8 +1,7 @@
 import hashlib
 
 import boto3
-from casbin import persist
-
+from casbin import persist, Model
 
 class Adapter(persist.Adapter):
     """the interface for Casbin adapters."""
@@ -22,6 +21,14 @@ class Adapter(persist.Adapter):
                     {
                         'AttributeName': 'id',
                         'AttributeType': 'S'
+                    },
+                    {
+                        'AttributeName': 'v0',
+                        'AttributeType': 'S'
+                    },
+                    {
+                        'AttributeName': 'v1',
+                        'AttributeType': 'S'
                     }
                 ],
                 KeySchema=[
@@ -30,10 +37,41 @@ class Adapter(persist.Adapter):
                         'KeyType': 'HASH'
                     },
                 ],
-                ProvisionedThroughput={
-                    'ReadCapacityUnits': 10,
-                    'WriteCapacityUnits': 10
-                }
+                GlobalSecondaryIndexes=[
+                    {
+                        'IndexName': 'v0-v1-index',
+                        'KeySchema': [
+                            {
+                                'AttributeName': 'v0',
+                                'KeyType': 'HASH'
+                            },
+                            {
+                                'AttributeName': 'v1',
+                                'KeyType': 'RANGE'
+                            },
+                        ],
+                        'Projection': {
+                            'ProjectionType': 'ALL',
+                        }
+                    },
+                    {
+                        'IndexName': 'v1-v0-index',
+                        'KeySchema': [
+                            {
+                                'AttributeName': 'v1',
+                                'KeyType': 'HASH'
+                            },
+                            {
+                                'AttributeName': 'v0',
+                                'KeyType': 'RANGE'
+                            },
+                        ],
+                        'Projection': {
+                            'ProjectionType': 'ALL',
+                        }
+                    },
+                ],
+                BillingMode='PAY_PER_REQUEST'
             )
         except self.dynamodb.exceptions.ResourceInUseException:
             pass
@@ -70,10 +108,7 @@ class Adapter(persist.Adapter):
 
         return data
 
-    def load_policy(self, model):
-        """load all policies from database"""
-        response = self.dynamodb.scan(TableName=self.table_name)
-
+    def load_policy_lines(self, response, model):
         for i in response['Items']:
             persist.load_policy_line(self.get_line_from_item(i), model)
 
@@ -88,6 +123,31 @@ class Adapter(persist.Adapter):
             # To forcefully break the loop when testing
             if "LastEvaluatedKey" in response and response["LastEvaluatedKey"] == "from_pytest":
                 break
+
+    def load_policy(self, model):
+        """load all policies from database"""
+        response = self.dynamodb.scan(TableName=self.table_name)
+        self.load_policy_lines(response, model)
+
+    def load_filtered_policy_by_sub(self, model: Model, sub: str) -> None:
+        response = self.dynamodb.query(
+            TableName=self.table_name,
+            IndexName='v0-v1-index',
+            Select='ALL_ATTRIBUTES',
+            KeyConditionExpression='v0 = :v0',
+            ExpressionAttributeValues={':v0':{'S': sub}}
+        )
+        self.load_policy_lines(response, model)
+
+    def load_filtered_policy_by_obj(self, model: Model, obj: str) -> None:
+        response = self.dynamodb.query(
+            TableName=self.table_name,
+            IndexName='v1-v0-index',
+            Select='ALL_ATTRIBUTES',
+            KeyConditionExpression='v1 = :v1',
+            ExpressionAttributeValues={':v1':{'S': obj}}
+        )
+        self.load_policy_lines(response, model)
 
     def get_line_from_item(self, item):
         """make casbin policy string from dynamodb item"""
